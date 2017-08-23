@@ -20,6 +20,21 @@ you create.
 import tensorflow as tf
 import math
 
+def weight_variable(shape):
+    initial = tf.truncated_normal(shape, stddev=0.1)
+    return tf.Variable(initial)
+
+def bias_variable(shape):
+    initial = tf.constant(0.1, shape=shape)
+    return tf.Variable(initial)
+
+def conv2d(x, W):
+    return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
+
+def max_pool_2x2(x):
+    return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],strides=[1, 2, 2, 1], padding='SAME')
+
+
 def input_placeholder():
     """
     This placeholder serves as the input to the model, and will be populated
@@ -109,7 +124,7 @@ def twolayer(X, Y, hiddensize=30, outputsize=10):
         stddev=1.0 / math.sqrt(float(hiddensize))),
         name='weights2')
     b2 = tf.Variable(tf.zeros([outputsize]))
-    preds = tf.nn.softmax(tf.matmul(hidden1, w2) + b2)
+    preds = tf.matmul(hidden1, w2) + b2 #tf.nn.softmax(tf.matmul(hidden1, w2) + b2)
 
     batch_xentropy = tf.nn.softmax_cross_entropy_with_logits(logits=preds, labels=Y)
     batch_loss = tf.reduce_mean(batch_xentropy)
@@ -144,6 +159,29 @@ def convnet(X, Y, convlayer_sizes=[10, 10], \
     will be from the conv2 layer. If you reshape the conv2 output using tf.reshape,
     you should be able to call onelayer() to get the final layer of your network
     """
+    logits = X
+
+    W_conv1 = weight_variable([filter_shape[0], filter_shape[0], 1, convlayer_sizes[0]])
+    b_conv1 = bias_variable([convlayer_sizes[0]])
+
+    conv1 = tf.nn.relu(conv2d(logits, W_conv1) + b_conv1)
+    pool1 = max_pool_2x2(conv1)
+
+    W_conv2 = weight_variable([filter_shape[1], filter_shape[1], convlayer_sizes[0], convlayer_sizes[1]])
+    b_conv2 = bias_variable([convlayer_sizes[1]])
+
+    conv2 = tf.nn.relu(conv2d(pool1, W_conv2) + b_conv2)
+    pool2 = max_pool_2x2(conv2)
+
+    pool2_flat = tf.reshape(pool2, [-1, 7*7*10])
+
+    w = tf.Variable(tf.zeros([7*7*10, outputsize]))
+    b = tf.Variable(tf.zeros([outputsize]))
+    preds = tf.matmul(pool2_flat, w) + b
+
+    batch_xentropy = tf.nn.softmax_cross_entropy_with_logits(labels=Y, logits=preds)
+    batch_loss = tf.reduce_mean(batch_xentropy)
+
     return conv1, conv2, w, b, logits, preds, batch_xentropy, batch_loss
 
 def train_step(sess, batch, X, Y, train_op, loss_op, summaries_op):
