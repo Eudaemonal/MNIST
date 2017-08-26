@@ -83,11 +83,12 @@ def onelayer(X, Y, layersize=10):
         batch_xentropy: The cross-entropy loss for each image in the batch
         batch_loss: The average cross-entropy loss of the batch
     """
-    logits = X
-    w = tf.Variable(tf.zeros([784, layersize]))
+
+    w = tf.Variable(tf.zeros([X.get_shape()[1], layersize]))
     b = tf.Variable(tf.zeros([layersize]))
-    preds = tf.nn.softmax(tf.matmul(logits, w) + b)
-    batch_xentropy = -tf.reduce_sum(Y * tf.log(preds), reduction_indices=[1])
+    logits = tf.matmul(X, w) + b
+    preds = tf.nn.softmax(logits)
+    batch_xentropy = tf.nn.softmax_cross_entropy_with_logits(logits=preds, labels=Y)
     batch_loss = tf.reduce_mean(batch_xentropy)
 
     return w, b, logits, preds, batch_xentropy, batch_loss
@@ -124,7 +125,7 @@ def twolayer(X, Y, hiddensize=30, outputsize=10):
         stddev=1.0 / math.sqrt(float(hiddensize))),
         name='weights2')
     b2 = tf.Variable(tf.zeros([outputsize]))
-    preds = tf.matmul(hidden1, w2) + b2 #tf.nn.softmax(tf.matmul(hidden1, w2) + b2)
+    preds = tf.matmul(hidden1, w2) + b2 
 
     batch_xentropy = tf.nn.softmax_cross_entropy_with_logits(logits=preds, labels=Y)
     batch_loss = tf.reduce_mean(batch_xentropy)
